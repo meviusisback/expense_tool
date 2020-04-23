@@ -36,8 +36,25 @@ class Main:
         description = self.call.description_input.text()
         country = self.call.country_input.text()
         category = self.call.listWidget1.currentItem().text()
-        self.expenselist.new_expense(amount, description, country, category)
-                
+        param_list = [amount, description, country, category]
+        for i in param_list:
+            if i == '':
+                self.errorbox('All fields need to completed')
+            else:
+                if (amount.isdigit()):
+                    self.expenselist.new_expense(amount, description, country, category)
+                    self.call.amount_input.setText('')
+                    self.call.description_input.setText('')
+                    self.call.country_input.setText('')
+                    break
+                else:
+                    self.errorbox('The amount you provided is not a number')
+
+    def errorbox(self, error_message):
+        errbox = QtWidgets.QMessageBox()
+        errbox.setText(error_message)
+        errbox.exec()
+
     def show_categories(self, index):
         # Print the list of categories in the listWidget
         jointlistwidg = 'listWidget' + str(index)
@@ -78,10 +95,21 @@ class Main:
         country = self.call.country_input_2.text()
         category = self.call.listWidget2.currentItem().text()
         expense_id = self.call.ID_label_2_desc.text()
-        self.expenselist.modify_expense(expense_id, amount, description, country, category)
-        self.show_expenses(2) # Update the expense list after the expense has been modified
-        self.show_categories(2) # Update categories
-        self.category_selection(expense_id) # Update the category selection
+        param_list = [amount, description, country, category]
+        for i in param_list:        
+            if i == '':
+                self.errorbox('All fields need to be completed')
+                break
+            else:
+                if (amount.isdigit()):
+                    self.expenselist.modify_expense(expense_id, amount, description, country, category)
+                    self.show_expenses(2) # Update the expense list after the expense has been modified
+                    self.show_categories(2) # Update categories
+                    self.category_selection(expense_id) # Update the category selection
+                    break
+                else:
+                    self.errorbox('The amount you provided is not a number')
+                    self.call.amount_input_2.setText('')
 
     def expensewidgetclicked(self, item):
         # Change the modify expense fields to show the selected expense
