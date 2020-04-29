@@ -1,5 +1,5 @@
 import os, sys
-from PyQt5 import QtWidgets, uic
+from PyQt5 import QtWidgets, uic, QtCore
 from qt_expense import Expense, ExpenseList, Category, CategoryList
 
 class Main:
@@ -11,25 +11,32 @@ class Main:
         # Creates the ExpenseList and the Category list objects
         self.expenselist = ExpenseList()
         self.categorylist = CategoryList()
+        # Toolbar Menu entries - File
+        self.call.actionModify_an_Expense.triggered.connect(self.modify_expense_layout, QtCore.Qt.UniqueConnection)
+        self.call.actionNew_Expense.triggered.connect(self.add_expense_layout, QtCore.Qt.UniqueConnection)
+        self.call.actionShow_all_Expense.triggered.connect(self.show_expenses_layout, QtCore.Qt.UniqueConnection)
+        self.call.actionCategories.triggered.connect(self.categories_layout, QtCore.Qt.UniqueConnection)
+        self.call.actionExit.triggered.connect(self.quit_function, QtCore.Qt.UniqueConnection)
+        self.call.buttonBox.rejected.connect(self.quit_function, QtCore.Qt.UniqueConnection)
+        self.call.buttonBox.accepted.connect(self.add_expense, QtCore.Qt.UniqueConnection)
+        self.call.buttonBox_2.accepted.connect(self.modify_expense, QtCore.Qt.UniqueConnection)
+        self.call.expenseWidget2.itemClicked.connect(self.expensewidgetclicked, QtCore.Qt.UniqueConnection)
+        self.call.add_button.clicked.connect(self.add_categories, QtCore.Qt.UniqueConnection)
+        self.call.modify_button.clicked.connect(self.modify_category, QtCore.Qt.UniqueConnection)
+    
+
 
     def run(self):
         # First interface is for adding an expense
         self.add_expense_layout()
-        # Toolbar Menu entries - File
-        self.call.actionModify_an_Expense.triggered.connect(self.modify_expense_layout)
-        self.call.actionNew_Expense.triggered.connect(self.add_expense_layout)
-        self.call.actionShow_all_Expense.triggered.connect(self.show_expenses_layout)
-        self.call.actionExit.triggered.connect(self.quit_function)
+        
         # Final execution, to be kept at the bottom
         self.call.show()
         self.app.exec()
 
     def add_expense_layout(self):
         # Call the first stack to show add expense screen
-        self.call.buttonBox.accepted.connect(self.add_expense)
         self.show_categories(1)
-        self.call.stackedWidget.setCurrentIndex(0)
-        self.call.buttonBox.rejected.connect(self.quit_function)
         self.call.stackedWidget.setCurrentIndex(0)
         self.call.listWidget1.setCurrentRow(0)
 
@@ -46,8 +53,7 @@ class Main:
             'country': country,
             'category': category
         }
-        check_fields = self.fields_check(param_list)
-        if check_fields == True:
+        if self.fields_check(param_list) == True:
             if (amount.isdigit()):
                 self.expenselist.new_expense(amount, description, country, category)
                 self.call.amount_input.setText('')
@@ -55,7 +61,8 @@ class Main:
                 self.call.country_input.setText('')
             else:
                 self.errorbox('The amount you provided is not a number')
-
+        
+    
     def errorbox(self, error_message):
         # ErrorBox execution on the UI
         errbox = QtWidgets.QMessageBox()
@@ -70,9 +77,10 @@ class Main:
         self.listwidgetAttr.clear()
         categories = self.categorylist.categories
         if not categories:
-            categories.append('Generic')
+            self.categorylist.new_category('Generic')
         for category in categories:
-            self.listwidgetAttr.addItem(category)
+            content_category = category.name
+            self.listwidgetAttr.addItem(content_category)
 
     def show_expenses(self, index, expenses=None):
         # Print the list of expenses in the listWidget
@@ -96,8 +104,8 @@ class Main:
         # Preselect first row
         self.call.expenseWidget2.setCurrentRow(0) 
         self.expensewidgetclicked(self.call.expenseWidget2.currentItem())
-        self.call.expenseWidget2.itemClicked.connect(self.expensewidgetclicked)
-        self.call.buttonBox_2.accepted.connect(self.modify_expense)
+        
+        
     
     def modify_expense(self):
         # call the Class function to actually modify the expense
@@ -207,21 +215,22 @@ class Main:
         # Define the layout for the categories stack
         self.call.stackedWidget.setCurrentIndex(3)
         # Iterate the category list to list all categories
-        self.call.add_button.clicked.connect(self.add_categories)
-    
+        self.category_show()
+        self.call.categorieslistWidget.setCurrentRow(0)
+        
     def category_show(self):
         # Refresh the category list in stack 3
         self.call.categorieslistWidget.clear()
         for category in self.categorylist.categories:
             # Add the number of expenses that have that category to the text string
-            category_text = category + ' - ' + str(self.count_expense_category(category))
+            category_text = str(category.id) + ' - ' + category.name + ' - ' + str(self.count_expense_category(category))
             self.call.categorieslistWidget.addItem(category_text)
     
     def count_expense_category(self, category):
         # Count how many expenses have a specific category
         count = 0
         for expense in self.expenselist.expenses:
-            if category == expense.category:
+            if category.name == expense.category:
                 count += 1
         return count
 
@@ -237,11 +246,19 @@ class Main:
                     self.errorbox('This category exists already')
                     return False
             else:
-                self.categorylist.categories.append(line_text)
+                self.categorylist.new_category(line_text)
                 self.category_show()
                 self.call.add_categories_line.setText('')
 
-
+    def modify_category(self):
+        item = self.call.categorieslistWidget.currentItem()
+        item = item.text().split(' - ')
+        inputbox = QtWidgets.QInputDialog()
+        text, ok = inputbox.getText(self.call, 'Category Name', 'Please input the new category name: ', QtWidgets.QLineEdit.Normal, '')
+        if ok and text:
+            self.categorylist.change_category(int(item[0]), text)
+            self.category_show()
+            self.call.categorieslistWidget.setCurrentRow(0)
 
     def quit_function(self):
         sys.exit()
