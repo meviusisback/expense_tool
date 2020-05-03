@@ -1,6 +1,6 @@
 import os, sys
 from PyQt5 import QtWidgets, uic, QtCore
-from qt_expense import Expense, ExpenseList, Category, CategoryList
+from qt_expense import Expense, ExpenseList, Category
 
 class Main:
     def __init__(self):
@@ -10,7 +10,6 @@ class Main:
         self.call = uic.loadUi(self.ui_path + "/main.ui")
         # Creates the ExpenseList and the Category list objects
         self.expenselist = ExpenseList()
-        self.categorylist = CategoryList()
         # Toolbar Menu entries - File
         self.call.actionModify_an_Expense.triggered.connect(self.modify_expense_layout, QtCore.Qt.UniqueConnection)
         self.call.actionNew_Expense.triggered.connect(self.add_expense_layout, QtCore.Qt.UniqueConnection)
@@ -20,6 +19,7 @@ class Main:
         self.call.buttonBox.rejected.connect(self.quit_function, QtCore.Qt.UniqueConnection)
         self.call.buttonBox.accepted.connect(self.add_expense, QtCore.Qt.UniqueConnection)
         self.call.buttonBox_2.accepted.connect(self.modify_expense, QtCore.Qt.UniqueConnection)
+        self.call.buttonBox_2.rejected.connect(self.modify_expense_layout, QtCore.Qt.UniqueConnection)
         self.call.expenseWidget2.itemClicked.connect(self.expensewidgetclicked, QtCore.Qt.UniqueConnection)
         self.call.add_button.clicked.connect(self.add_categories, QtCore.Qt.UniqueConnection)
         self.call.modify_button.clicked.connect(self.modify_category, QtCore.Qt.UniqueConnection)
@@ -75,9 +75,9 @@ class Main:
         # Makes sure it selects the correct index for picking the right table
         self.listwidgetAttr = getattr(self.call, jointlistwidg)
         self.listwidgetAttr.clear()
-        categories = self.categorylist.categories
+        categories = self.expenselist.categories
         if not categories:
-            self.categorylist.new_category('Generic')
+            self.expenselist.new_category('Generic')
         for category in categories:
             content_category = category.name
             self.listwidgetAttr.addItem(content_category)
@@ -112,7 +112,8 @@ class Main:
         amount = self.call.amount_input_2.text()
         description = self.call.description_input_2.text()
         country = self.call.country_input_2.text()
-        category = self.call.listWidget2.currentItem().text()
+        category_text = self.call.listWidget2.currentItem().text()
+        category = self.expenselist._find_category(category_text)
         expense_id = self.call.ID_label_2_desc.text()
         param_list = {
             'amount': amount,
@@ -130,7 +131,8 @@ class Main:
                 # Update categories
                 self.show_categories(2) 
                 # Makes sure the expense category is selected right
-                self.category_selection(expense_id) 
+                expense = self.expenselist._find_expense(expense_id)
+                self.category_selection(expense) 
             else:
                 self.errorbox('The amount you provided is not a number')
                 self.call.amount_input_2.setText('')
@@ -154,18 +156,18 @@ class Main:
             self.call.description_input_2.setText(expense.description)
             self.call.country_input_2.setText(expense.country)
             self.call.ID_label_2_desc.setText(str(expense.id))
-            self.category_selection(str(expense.id))
+            self.category_selection(expense)
      
-    def category_selection(self, expense_id):      
+    def category_selection(self, expense):      
         # Select the right category on the listWidget, based on the class attribute
-        expense = self.expenselist._find_expense(expense_id)
+        category = expense.category
         all_items = []
         # Iterate all category list in the widget
         for x in range(self.call.listWidget2.count()):
             all_items.append(self.call.listWidget2.item(x))
         # Select the correspondent category
         for i in all_items:
-            if i.text() == expense.category:
+            if i.text() == category.name:
                 self.call.listWidget2.setCurrentItem(i)
     
     def show_expenses_layout(self):
@@ -197,7 +199,7 @@ class Main:
             self.call.expenseTableWidget.setItem(numRows, 1, QtWidgets.QTableWidgetItem(str(creation_date)))
             self.call.expenseTableWidget.setItem(numRows, 2, QtWidgets.QTableWidgetItem(amount))
             self.call.expenseTableWidget.setItem(numRows, 3, QtWidgets.QTableWidgetItem(description))
-            self.call.expenseTableWidget.setItem(numRows, 4, QtWidgets.QTableWidgetItem(category))
+            self.call.expenseTableWidget.setItem(numRows, 4, QtWidgets.QTableWidgetItem(category.name))
             self.call.expenseTableWidget.setItem(numRows, 5, QtWidgets.QTableWidgetItem(country))
             self.call.expenseTableWidget.resizeColumnsToContents()
             total = total + int(expense.amount)
@@ -208,7 +210,7 @@ class Main:
         for category in category_count:
             numRows = self.call.categoryTableWidget.rowCount()
             self.call.categoryTableWidget.insertRow(numRows)
-            self.call.categoryTableWidget.setItem(numRows, 0, QtWidgets.QTableWidgetItem(category))
+            self.call.categoryTableWidget.setItem(numRows, 0, QtWidgets.QTableWidgetItem(category.name))
             self.call.categoryTableWidget.setItem(numRows, 1, QtWidgets.QTableWidgetItem(str(category_count[category])))
 
     def categories_layout(self):
@@ -221,7 +223,7 @@ class Main:
     def category_show(self):
         # Refresh the category list in stack 3
         self.call.categorieslistWidget.clear()
-        for category in self.categorylist.categories:
+        for category in self.expenselist.categories:
             # Add the number of expenses that have that category to the text string
             category_text = str(category.id) + ' - ' + category.name + ' - ' + str(self.count_expense_category(category))
             self.call.categorieslistWidget.addItem(category_text)
@@ -230,23 +232,23 @@ class Main:
         # Count how many expenses have a specific category
         count = 0
         for expense in self.expenselist.expenses:
-            if category.name == expense.category:
+            if category == expense.category:
                 count += 1
         return count
 
     def add_categories(self):
-        # Add a new category to categorylist
+        # Add a new category to ExpenseList
         line_text = self.call.add_categories_line.text()
         if line_text == '':
             self.errorbox('Category field is empty')
             return False
         else:
-            for category in self.categorylist.categories:
+            for category in self.expenselist.categories:
                 if line_text == category:
                     self.errorbox('This category exists already')
                     return False
             else:
-                self.categorylist.new_category(line_text)
+                self.expenselist.new_category(line_text)
                 self.category_show()
                 self.call.add_categories_line.setText('')
 
@@ -256,7 +258,7 @@ class Main:
         inputbox = QtWidgets.QInputDialog()
         text, ok = inputbox.getText(self.call, 'Category Name', 'Please input the new category name: ', QtWidgets.QLineEdit.Normal, '')
         if ok and text:
-            self.categorylist.change_category(int(item[0]), text)
+            self.expenselist.change_category(int(item[0]), text)
             self.category_show()
             self.call.categorieslistWidget.setCurrentRow(0)
 

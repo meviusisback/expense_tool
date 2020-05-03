@@ -7,7 +7,7 @@ default_country = 'Malta'
 
 class Expense:
     # The single expense class represented in a ExpenseList
-    def __init__(self, amount, description, country = default_country, category = ''):
+    def __init__(self, amount, description, category, country = default_country,):
         # Initialise an expense with some attributes and optional country and category
         self.amount = amount
         self.description = description
@@ -18,11 +18,20 @@ class Expense:
         self.country = country
         self.category = category
 
+class Category:
+    # Create a category object    
+    def __init__(self, name):
+        self.name = name
+        global last_category_id
+        last_category_id = last_category_id + 1
+        self.id = last_category_id
+
 class ExpenseList:
     # Initialise the collection of expenses
     def __init__(self):
         # Initialise with an empty list
         self.expenses = []
+        self.categories = []
 
     def _find_expense(self, expense_id):
         # Locate the expense with given ID
@@ -33,7 +42,8 @@ class ExpenseList:
 
     def new_expense(self, amount, description, country='', category=''):
         # Create a new expense and add it to the list
-        self.expenses.append(Expense(amount, description, country, category))
+        category_obj = self._find_category(0, category)
+        self.expenses.append(Expense(amount, description, category_obj, country))
 
     def modify_expense(self, expense_id, amount=None, description=None, country=None, category=None):
         # Find the Expense and change its content
@@ -50,26 +60,18 @@ class ExpenseList:
             return True
         return False
 
-class Category:
-    # Create a category object    
-    def __init__(self, name):
-        self.name = name
-        global last_category_id
-        last_category_id = last_category_id + 1
-        self.id = last_category_id
-
-class CategoryList:
-    # Create a new category list
-
-    def __init__(self):
-        self.categories = []
-
-    def _find_category(self, category_id):
+    def _find_category(self, category_id = 0, name = ''):
         # Locate the category with given ID
-        for category in self.categories:
-            if str(category.id) == str(category_id):
-                return category
-        return None
+        if category_id != 0:
+            for category in self.categories:
+                if str(category.id) == str(category_id):
+                    return category
+            return None
+        if name != '':
+            for category in self.categories:
+                if category.name == name:
+                    return category
+            return None
 
     def change_category(self, category_id, name):
         # Change the given category name
@@ -83,5 +85,38 @@ class CategoryList:
         # Create a new category and add it to the category list
         self.categories.append(Category(name))
 
-   
+
+'''
+class CategoryList:
+    # Create a new category list
+
+    def __init__(self):
+        self.categories = []
+
+    def _find_category(self, category_id = 0, name = ''):
+        # Locate the category with given ID
+        if category_id != 0:
+            for category in self.categories:
+                if str(category.id) == str(category_id):
+                    return category
+            return None
+        if name != '':
+            for category in self.categories:
+                if category.name == name:
+                    return category
+            return None
+
+    def change_category(self, category_id, name):
+        # Change the given category name
+        category = self._find_category(category_id)
+        if category:
+            category.name = name
+            return True
+        return False
+        
+    def new_category(self, name):
+        # Create a new category and add it to the category list
+        self.categories.append(Category(name))
+
+'''   
         
